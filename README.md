@@ -1,3 +1,10 @@
+# Integrantes
+- Andre Vieira Penchel;
+- Arthur de Sá Camargo;
+- Henrique Saldanha Mendes Veloso;
+- João Victor Ferreira Pena;
+- Matheus de Oliveira Campello
+
 # Trabalho Prático 3 - Otimização Paralela de GEMM
 
 Este repositório reúne o material desenvolvido para um trabalho prático sobre otimização de multiplicação de matrizes densas (GEMM), com foco em desempenho em CPU e GPU. O projeto compara implementações sequenciais e otimizadas, incluindo versões com blocagem, paralelismo via OpenMP e aceleração via CUDA, além de registrar resultados experimentais em arquivos CSV e consolidá-los em um notebook e em um relatório técnico.
