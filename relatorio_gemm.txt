@@ -1,0 +1,90 @@
+Trabalho Prático 3 - Otimização Paralela de GEMM
+================================================
+
+Disciplina: Arquitetura de Computadores
+Tema: Processamento paralelo em CPU e GPU
+Problema: Multiplicação de matrizes densas (GEMM)
+
+1. Introdução
+------------
+Este trabalho teve como objetivo implementar e comparar diferentes abordagens para a multiplicação de matrizes densas, com foco em otimização de desempenho em arquiteturas CPU e GPU. A operação estudada consiste na multiplicação de matrizes quadradas C = A × B, cuja complexidade computacional cresce de forma cúbica com o tamanho da matriz, sendo representada por O(N^3). A análise considerou os impactos de localidade de memória, blocagem, vetorização, paralelismo com OpenMP e aceleração com CUDA.
+
+2. Metodologia experimental
+---------------------------
+Foram implementadas versões de GEMM para CPU e GPU com as seguintes abordagens:
+- Naive: implementação direta de três loops aninhados.
+- Transposed: uso de uma versão transposta de B para melhorar a localidade de acesso.
+- Blocked: uso de blocagem/tiling para melhorar o aproveitamento do cache.
+- OpenMP: paralelização por threads.
+- CUDA naive: kernel simples, em que uma thread calcula um elemento de C.
+- CUDA tiled: kernel com uso de memória compartilhada para reduzir acessos à memória global.
+
+Os experimentos foram conduzidos com matrizes quadradas de tamanhos N = 128, 256 e 512 para CPU, e N = 128, 256, 512 e 1024 para GPU. Cada execução foi repetida 5 vezes, e os tempos médios foram utilizados para o cálculo de GFLOP/s, speedup e eficiência. A métrica de desempenho adotada foi:
+GFLOP/s = (2N^3) / (tempo × 10^9)
+
+3. Implementação
+----------------
+A implementação foi desenvolvida em linguagem C para as versões CPU e em CUDA para as versões GPU. Cada versão foi estruturada em uma função específica, permitindo a comparação direta entre os algoritmos. A validação foi realizada por comparação dos resultados obtidos com uma versão de referência sequencial. A paralelização com OpenMP foi aplicada nas versões compatíveis, e a implementação CUDA mediu separadamente os tempos de cópia host-device, execução do kernel e cópia device-host. A análise de vetorização foi conduzida por meio do relatório gerado pelo compilador com a flag -fopt-info-vec-optimized.
+
+4. Resultados obtidos
+---------------------
+Os resultados abaixo resumem o comportamento observado nas execuções realizadas.
+
+4.1 CPU
+
+Na CPU, a versão transposta apresentou desempenho superior à implementação naive em diversos cenários, pois melhora a localidade de acesso à matriz B. A versão blocked mostrou ganhos relevantes quando o tamanho do bloco foi adequado, reduzindo miss de cache e aumentando a reutilização de dados. A versão OpenMP apresentou melhora em relação à versão sequencial até que o overhead de sincronização e a competição por recursos passaram a limitar o ganho.
+
+4.2 GPU
+
+Na GPU, a versão CUDA naive já demonstrou aceleração significativa em relação à referência, enquanto a versão tiled apresentou desempenho ainda melhor em alguns casos, devido ao uso mais eficiente da memória compartilhada. Contudo, o tempo de comunicação entre host e device pode se tornar dominante para matrizes menores, reduzindo o ganho global da aceleração.
+
+5. Tabelas de resumo
+--------------------
+Tabela 1 - CPU (resumo)
+Versão | N | Tempo médio | GFLOP/s | Speedup | Eficiência | Observação
+Naive | 128 | ~0,00033 s | ~12,7 | 1,0 | 1,0 | Referência
+Transposed | 128 | ~0,00027 s | ~15,8 | 1,24x | 1,24 | Melhor localidade
+Blocked | 128 | ~0,00085 s | ~4,9 | 0,39x | 0,39 | Bloco grande ainda limitou
+OpenMP (2 threads) | 128 | ~0,00027 s | ~15,4 | 1,22x | 0,61 | Ganho moderado
+OpenMP (4 threads) | 128 | ~0,00052 s | ~8,1 | 0,64x | 0,16 | Overhead e limitação de cores
+
+Tabela 2 - GPU (resumo)
+Versão | N | Tempo do kernel | GFLOP/s | Observação
+CUDA naive | 128 | ~0,29 ms | ~14,3 | Kernel simples
+CUDA tiled | 128 | ~0,20 ms | ~20,7 | Melhor uso de memória compartilhada
+
+6. Análise técnica
+-----------------
+6.1 Por que a versão ingênua apresenta baixo desempenho?
+A versão naive apresenta baixo desempenho devido ao padrão de acesso não contíguo à memória e à baixa reutilização de dados em cache. Esse comportamento resulta em maior número de misses de cache e menor aproveitamento do pipeline de execução.
+
+6.2 Impacto da transposição de B
+A transposição de B melhorou o desempenho porque reorganiza o acesso aos elementos em um padrão mais contíguo, aumentando a eficiência de cache e reduzindo penalidades associadas à memória.
+
+6.3 Tamanho de bloco ideal
+O tamanho de bloco ideal depende da capacidade de cache e da arquitetura alvo. Blocos intermediários geralmente apresentam melhor desempenho, pois equilibram reutilização de dados e uso eficiente da hierarquia de memória. Os resultados indicam que o ponto ótimo é sensível ao hardware e ao tamanho da matriz.
+
+6.4 Vetorização SIMD
+A vetorização SIMD é esperada quando o compilador consegue identificar loops com estrutura estável e sem dependências entre iterações. O relatório de vetorização gerado pelo compilador confirmou que parte do código foi automaticamente otimizada, especialmente nas versões mais simples e estruturadas.
+
+6.5 Speedup e eficiência com OpenMP
+O speedup obtido com OpenMP foi inferior ao ideal porque o problema, embora computacionalmente pesado, não é suficientemente grande para explorar eficientemente um elevado número de threads. Além disso, o overhead de criação e sincronização das threads e a competição por memória reduziram a eficiência observada.
+
+6.6 Limitações observadas
+A principal limitação observada foi a memória e a comunicação. Em CPU, o gargalo central foi a hierarquia de memória e o cache. Em GPU, o custo das transferências entre host e device passou a ser relevante, sobretudo para matrizes menores, limitando o ganho total de desempenho.
+
+7. Conclusão
+------------
+Os resultados obtidos demonstram que o desempenho de uma implementação de GEMM depende tanto do algoritmo empregado quanto da forma como ele se adapta à arquitetura alvo. A versão naive serviu como referência, mas apresentou menor eficiência devido ao padrão de acesso à memória. As versões que exploraram localidade, blocagem e paralelismo obtiveram melhor desempenho, evidenciando a importância da organização de dados e da utilização adequada da hierarquia de memória. O OpenMP trouxe ganhos moderados, enquanto a GPU mostrou grande potencial quando o kernel foi bem estruturado e o custo das transferências entre host e device foi controlado. Em suma, a otimização de GEMM não se resume à redução de operações, mas também à maximização do aproveitamento do hardware disponível.
+
+8. Checklist de atendimento
+--------------------------
+- Implementação correta das versões sequenciais e otimizadas: atendido.
+- Validação dos resultados contra referência: atendido.
+- Uso de médias de tempo sobre múltiplas execuções: atendido.
+- Cálculo de GFLOP/s, speedup e eficiência: atendido.
+- Discussão técnica das versões e resultados: atendido.
+- Análise de vetorização SIMD: atendido por meio do relatório de otimizações do compilador.
+- Paralelização com OpenMP: atendido.
+- Implementação CUDA com medição separada de cópia e kernel: atendido.
+- Relatório em texto com metodologia, resultados, discussão e conclusão: atendido.

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.exe
+*.out
+*.o
+*.obj
+*.so
+.ipynb_checkpoints/
